@@ -1,0 +1,17 @@
+{
+  "name": "ASMR 놀이터",
+  "short_name": "ASMR 놀이터",
+  "description": "손끝으로 만지는 소리 — 뽁뽁이, 키보드, 낙엽, 말랑이",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1d1730",
+  "theme_color": "#1d1730",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

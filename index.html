@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>ASMR 놀이터</title>
+<meta name="description" content="손끝으로 만지는 소리 — 뽁뽁이, 키보드, 낙엽, 말랑이">
+<meta name="theme-color" content="#1d1730">
+<meta property="og:title" content="ASMR 놀이터">
+<meta property="og:description" content="손끝으로 만지는 소리 — 뽁뽁이, 키보드, 낙엽, 말랑이">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ASMR 놀이터">
+<style>
+  :root { --bg: #1d2333; --ui: #e8ecf7; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+  canvas { display: block; width: 100vw; height: 100vh; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .hud { position: fixed; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; color: var(--ui); pointer-events: none; }
+  .hud .count { font-size: 15px; opacity: .8; font-variant-numeric: tabular-nums; }
+  .hud button { pointer-events: auto; border: 0; border-radius: 999px; padding: 9px 16px; font: inherit; font-size: 14px; color: var(--ui); background: rgba(255,255,255,.12); cursor: pointer; }
+  .hud button:active { background: rgba(255,255,255,.25); }
+  .hud button.pulse { animation: pulse 1s ease-in-out infinite; background: rgba(255,255,255,.28); }
+  @keyframes pulse { 50% { transform: scale(1.08); } }
+  .hud .tabs { pointer-events: auto; display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(255,255,255,.08); }
+  .hud .tabs button { padding: 7px 14px; background: transparent; opacity: .6; }
+  .hud .tabs button.on { background: rgba(255,255,255,.2); opacity: 1; }
+  .sub { position: fixed; top: 62px; left: 0; right: 0; display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; padding: 0 12px; pointer-events: none; }
+  .chip { pointer-events: auto; border: 0; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 13px; color: var(--ui); background: rgba(255,255,255,.1); cursor: pointer; }
+  .chip.on { background: rgba(255,255,255,.28); }
+  .hud .count, .hud button { white-space: nowrap; }
+  @media (max-width: 480px) {
+    .hud { padding: 10px 10px; gap: 6px; }
+    .hud .count { font-size: 13px; }
+    .hud button { padding: 7px 11px; font-size: 13px; }
+    .hud .tabs button { padding: 6px 10px; }
+  }
+  .hint { position: fixed; bottom: 22px; left: 64px; right: 64px; text-align: center; color: var(--ui); opacity: .5; font-size: 14px; pointer-events: none; transition: opacity .6s; }
+  .hint.hide { opacity: 0; }
+
+  /* 처음 화면 */
+  .home { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 30px; padding: 24px 16px 80px; overflow: hidden; color: var(--ui); text-align: center;
+    background: radial-gradient(ellipse at 50% 30%, #2f2a52 0%, #1d1a33 55%, #14122380 100%), #14122b;
+    transition: opacity .4s, visibility .4s; }
+  .home.hide { opacity: 0; visibility: hidden; pointer-events: none; }
+  .home .glow { position: absolute; border-radius: 50%; filter: blur(60px); opacity: .35; animation: drift 14s ease-in-out infinite alternate; pointer-events: none; }
+  .home .g1 { width: 300px; height: 300px; background: #ff8fb8; top: -60px; left: -80px; }
+  .home .g2 { width: 340px; height: 340px; background: #6fb0ff; bottom: -100px; right: -90px; animation-delay: -5s; }
+  .home .g3 { width: 240px; height: 240px; background: #ffd96a; top: 45%; left: 55%; opacity: .2; animation-delay: -9s; }
+  @keyframes drift { to { transform: translate(40px, -30px) scale(1.15); } }
+  .home .hero, .home .cards { position: relative; }
+  .home h1 { margin: 0 0 8px; font-size: clamp(32px, 9vw, 48px); letter-spacing: -.02em; }
+  .home .hero p { margin: 0; font-size: 14px; opacity: .7; }
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; width: min(440px, 100%); }
+  .card { display: flex; flex-direction: column; align-items: center; gap: 6px; border: 0; border-radius: 22px; padding: 22px 10px 18px;
+    color: #fff; font: inherit; cursor: pointer; box-shadow: 0 8px 24px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.25); transition: transform .15s; }
+  .card:hover { transform: translateY(-2px); }
+  .card:active { transform: scale(.96); }
+  .card .ico { font-size: 44px; line-height: 1.1; }
+  .card b { font-size: 17px; }
+  .card small { font-size: 12.5px; opacity: .85; }
+  .card[data-scene=bubble]   { background: linear-gradient(145deg, #4a78c9, #6fb0ff); }
+  .card[data-scene=keyboard] { background: linear-gradient(145deg, #6b5bd6, #a08bff); }
+  .card[data-scene=leaf]     { background: linear-gradient(145deg, #c8651e, #e2a93b); }
+  .card[data-scene=squish]   { background: linear-gradient(145deg, #e0508f, #ff9ec4); }
+
+  /* 왼쪽 아래 처음 화면 버튼, 오른쪽 아래 소리 끄기 버튼 */
+  .fab { position: fixed; bottom: 14px; z-index: 30; width: 44px; height: 44px; border: 0; border-radius: 50%; font-size: 20px; line-height: 1;
+    color: var(--ui); background: rgba(255,255,255,.14); backdrop-filter: blur(6px); cursor: pointer; }
+  .fab:active { background: rgba(255,255,255,.3); }
+  #homeBtn { left: 14px; }
+  #mute { right: 14px; }
+  .home:not(.hide) ~ #homeBtn { display: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud">
+  <span class="count" id="count"></span>
+  <div class="tabs" id="tabs">
+    <button data-scene="bubble">뽁뽁이</button>
+    <button data-scene="keyboard">키보드</button>
+    <button data-scene="leaf">낙엽</button>
+    <button data-scene="squish">말랑이</button>
+  </div>
+  <button id="reset">새 뽁뽁이</button>
+</div>
+<div class="sub" id="sub"></div>
+<div class="hint" id="hint">터치하거나 드래그해서 터뜨려 보세요</div>
+
+<div class="home" id="home">
+  <div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div>
+  <div class="hero">
+    <h1>ASMR 놀이터</h1>
+    <p>손끝으로 만지는 소리 · 이어폰을 끼면 더 좋아요 🎧</p>
+  </div>
+  <div class="cards">
+    <button class="card" data-scene="bubble"><span class="ico">🫧</span><b>뽁뽁이</b><small>톡톡 터뜨리기</small></button>
+    <button class="card" data-scene="keyboard"><span class="ico">⌨️</span><b>키보드</b><small>타건음 즐기기</small></button>
+    <button class="card" data-scene="leaf"><span class="ico">🍂</span><b>낙엽</b><small>바스락 부수기</small></button>
+    <button class="card" data-scene="squish"><span class="ico">🩷</span><b>말랑이</b><small>꾹꾹 주무르기</small></button>
+  </div>
+</div>
+<button class="fab" id="homeBtn" aria-label="처음 화면" title="처음 화면">🏠</button>
+<button class="fab" id="mute" aria-label="소리 끄기" title="소리 끄기">🔊</button>
+
+<script src="keysamples.js"></script>
+<script src="leafsample.js"></script>
+<script>
+'use strict';
+
+/* ───────────── 키보드 스위치별 소리 설정 ───────────── */
+const KEY_SWITCHES = {
+  // 참고 음원(4:00~4:30)에서 잘라낸 실제 타건음. keysamples.js 의 KEY_SAMPLES 를 무작위로 재생한다.
+  real:  { name: '실제 타건음', sample: true },
+  // click: 딸깍(상단 클릭) 세기, gap: 클릭에서 바닥 치는 소리까지의 간격(초)
+  brown: { name: '갈축',     click: 0.45, clickF: 3200, gap: 0.008, thock: 0.75, thockF: 195, knock: 0.6,  knockF: 850,  up: 0.35 },
+  // 청축: "찰칵찰칵" — 누를 때 "찰"(쓸리는 스침) + "칵"(딱 걸리는 소리), 뗄 때 작은 "찰칵" 한 번 더. 저음 몸통은 거의 없이 맑고 청량하게.
+  blue:  { name: '청축',     snappy: true, gain: 1.4, click: 0.9, clickF: 5000, gap: 0.014, thock: 0.45, thockF: 230, knock: 0.5, knockF: 1100, up: 0.5, click2: true },
+};
+
+/* ───────────── 오디오 (합성음) ───────────── */
+const Sound = {
+  ctx: null,
+  master: null,
+  dry: null,
+  wet: null,
+  noise: null,
+  voices: [],
+  MAX_VOICES: 24,
+  muted: false,      // 소리 끄기 (브라우저에 저장된다)
+  crunchBank: null,  // 합성한 짧은 "바삭" 알갱이 소리 여러 개
+  leafSample: null,  // 디코딩된 실제 낙엽 소리 (약 3.9초)
+  samples: [],       // 디코딩된 실제 타건음 버퍼
+  lastSample: -1,
+  // ?tune 패널에서 조절하는 값. 마음에 드는 값을 여기 기본값으로 옮기면 된다.
+  params: { pitch: 1.54, bright: 1.46, body: 0.27, tail: 0.57, reverb: 0.1 },
+
+  // 브라우저 정책상 첫 사용자 입력에서 만들고 resume 해야 한다
+  unlock() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      const c = this.ctx = new AC({ latencyHint: 'interactive' });
+      this.master = c.createGain();
+      this.master.gain.value = this.muted ? 0 : 0.9;
+      const comp = c.createDynamicsCompressor(); // 연타 시 클리핑 방지
+      this.master.connect(comp).connect(c.destination);
+
+      this.dry = c.createGain();
+      this.dry.connect(this.master);
+
+      // 아주 얕은 방 울림: 지수로 감쇠하는 노이즈 임펄스
+      const conv = c.createConvolver();
+      const ilen = Math.floor(c.sampleRate * 0.25);
+      const imp = c.createBuffer(2, ilen, c.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = imp.getChannelData(ch);
+        for (let i = 0; i < ilen; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / ilen, 3);
+      }
+      conv.buffer = imp;
+      this.wet = c.createGain();
+      this.wet.gain.value = this.params.reverb;
+      conv.connect(this.wet).connect(this.master);
+      this.convIn = conv;
+
+      const len = Math.floor(c.sampleRate * 0.3);
+      this.noise = c.createBuffer(1, len, c.sampleRate);
+      const d = this.noise.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      // 하나가 실패해도 나머지와 resume() 은 계속 진행되도록 각각 감싼다
+      for (const init of [() => this._loadSamples(), () => this._loadLeaf(), () => this._makeCrunchBank()]) {
+        try { init(); } catch (e) { console.error('[소리] 초기화 실패:', e); }
+      }
+    }
+    if (this.ctx.state !== 'running') this.ctx.resume();
+  },
+
+  // base64 WAV → AudioBuffer (file:// 로 열어도 되도록 fetch 없이 직접 디코딩)
+  _loadSamples() {
+    if (typeof KEY_SAMPLES === 'undefined') return;
+    for (const url of KEY_SAMPLES) {
+      const bin = atob(url.slice(url.indexOf(',') + 1));
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      this.ctx.decodeAudioData(bytes.buffer).then(b => this.samples.push(b), () => {});
+    }
+  },
+
+  // 실제 타건음 재생: 녹음에 이미 뗄 때 소리가 섞여 있어서 누를 때만 소리를 낸다.
+  _sample(size, down, vol, pan) {
+    if (!down || !this.samples.length) return;
+    let i;
+    do { i = Math.floor(Math.random() * this.samples.length); }
+    while (this.samples.length > 1 && i === this.lastSample);   // 같은 소리 연속 재생 방지
+    this.lastSample = i;
+    const buf = this.samples[i];
+    const rate = (0.97 + Math.random() * 0.06) * Math.pow(size, -0.08); // 큰 키일수록 살짝 낮게
+    const { out, pn } = this._voice(vol * 0.7 * (0.85 + Math.random() * 0.3), pan);
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = rate;
+    src.connect(out);
+    src.start();
+    this._release(out, pn, buf.duration / rate + 0.2);
+  },
+
+  _loadLeaf() {
+    if (typeof LEAF_SAMPLE === 'undefined') {
+      console.error('[소리] leafsample.js 를 불러오지 못했어요. index.html 과 같은 폴더에 있는지 확인하세요. (임시로 합성음을 대신 사용합니다)');
+      return;
+    }
+    const bin = atob(LEAF_SAMPLE.slice(LEAF_SAMPLE.indexOf(',') + 1));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    this.ctx.decodeAudioData(bytes.buffer).then(b => { this.leafSample = b; }, e => console.error('[소리] 낙엽 소리 디코딩 실패:', e));
+  },
+
+  // 살짝 찌그러뜨리는 곡선: 작은 소리는 키우고 큰 소리는 눌러서 "콰사삭" 하는 빽빽한 질감을 만든다
+  _satCurve() {
+    if (!this._sat) {
+      const n = 1024, k = 2.5, c = new Float32Array(n);
+      for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = Math.tanh(k * x) / Math.tanh(k); }
+      this._sat = c;
+    }
+    return this._sat;
+  },
+
+  // 낙엽 부서지는 소리 "콰사삭":
+  //  1) 콰   : 묵직한 충격 (저음 몸통 + 중저음 노이즈 + 저음 "쿵")
+  //  2) 사삭 : 실제 낙엽 녹음 두 겹을 조금 어긋나게 겹쳐 길고 촘촘한 바스락거림 (살짝 찌그러뜨려 빽빽하게)
+  // level: 0 낙엽 · 1 조각 · 2 부스러기
+  leaf(level, vol = 1, pan = 0) {
+    const c = this.ctx;
+    if (!c) return;
+    const buf = this.leafSample, lv = Math.min(2, level);
+    if (!buf) { // 파일을 못 불러왔거나 아직 준비 중이면 합성 바삭 소리로 대신한다
+      this.crunch(vol * [1, 0.85, 0.7][lv], pan, [0.75, 1.0, 1.25][lv]);
+      return;
+    }
+    const t = c.currentTime;
+    const { out, pn } = this._voice(vol * [0.45, 0.36, 0.28][lv], pan);
+    const sat = c.createWaveShaper();
+    sat.curve = this._satCurve(); sat.oversample = '2x';
+    sat.connect(out);
+    let longest = 0;
+    const layer = (delay, D, rate, mul, pw) => { // 녹음에서 무작위 지점을 잘라 서서히 잦아드는 볼륨으로 재생
+      const on = LEAF_ONSETS[Math.floor(Math.random() * LEAF_ONSETS.length)][0];
+      const start = Math.max(0, Math.min(on, buf.duration - D - 0.02)), dur = D / rate;
+      const N = 96, curve = new Float32Array(N);
+      for (let i = 0; i < N; i++) {
+        const x = i / (N - 1), a = Math.min(1, (x * dur) / 0.003);
+        curve[i] = mul * a * a * (3 - 2 * a) * Math.pow(1 - x, pw);
+      }
+      const env = c.createGain(), src = c.createBufferSource();
+      env.gain.setValueCurveAtTime(curve, t + delay, dur);
+      src.buffer = buf; src.playbackRate.value = rate;
+      src.connect(env).connect(sat);
+      src.start(t + delay, start, D);
+      longest = Math.max(longest, delay + dur);
+    };
+    const r = Math.random;
+    if (lv === 0) {
+      layer(0, 0.6, 0.88 + r() * 0.1, 1, 1.1);        // 길게 이어지는 사삭
+      layer(0.03, 0.42, 1.05 + r() * 0.12, 0.7, 1.4);  // 어긋나게 겹쳐 촘촘하게
+    } else if (lv === 1) {
+      layer(0, 0.34, 0.95 + r() * 0.1, 1, 1.4);
+    } else {
+      layer(0, 0.2, 1.05 + r() * 0.2, 1, 1.8);
+    }
+    if (lv <= 1) { // 콰: 충격
+      const big = lv === 0;
+      const n = this._noise(t, 0.1, 'bandpass', 500 + r() * 500, 0.9);
+      n.g.gain.setValueAtTime(0.0001, t);
+      n.g.gain.exponentialRampToValueAtTime(big ? 0.75 : 0.4, t + 0.004);
+      n.g.gain.exponentialRampToValueAtTime(0.0001, t + (big ? 0.09 : 0.06));
+      n.g.connect(out);
+      const o = c.createOscillator(), og = c.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(big ? 140 : 180, t);
+      o.frequency.exponentialRampToValueAtTime(big ? 55 : 80, t + 0.09);
+      og.gain.setValueAtTime(0.0001, t);
+      og.gain.exponentialRampToValueAtTime(big ? 0.5 : 0.25, t + 0.004);
+      og.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+      o.connect(og).connect(out);
+      o.start(t); o.stop(t + 0.12);
+      this.crunch(vol * (big ? 0.9 : 0.5), pan, big ? 0.72 : 0.95); // 저음 몸통이 있는 바삭 소리
+    }
+    this._release(out, pn, longest + 0.3);
+  },
+
+  // 크런치 말랑이의 "바삭": 저음 몸통이 살아 있는 짧은 알갱이 소리 20가지.
+  // (낙엽 소리보다 낮고 둔탁하다)
+  _makeCrunchBank() {
+    const c = this.ctx, sr = c.sampleRate;
+    this.crunchBank = Array.from({ length: 20 }, () => {
+      const dur = 0.07 + Math.random() * 0.05, n = Math.floor(sr * dur);
+      const buf = c.createBuffer(1, n, sr), d = buf.getChannelData(0);
+      const grains = 5 + Math.floor(Math.random() * 6);
+      for (let g = 0; g < grains; g++) {
+        const t0 = Math.floor(Math.pow(Math.random(), 1.4) * n * 0.6);
+        const len = Math.floor(sr * (0.0008 + Math.random() * 0.003));
+        const amp = (0.3 + Math.random() * 0.7) * Math.exp(-(t0 / n) * 1.8);
+        const f = 900 + Math.random() * 3300, r = 0.9 + Math.random() * 0.05;
+        const c1 = 2 * r * Math.cos(2 * Math.PI * f / sr), c2 = r * r;
+        let y1 = 0, y2 = 0;
+        for (let i = 0; i < len * 3 && t0 + i < n; i++) {
+          const x = i < len ? (Math.random() * 2 - 1) * (1 - i / len) : 0;
+          const y = x + c1 * y1 - c2 * y2;
+          y2 = y1; y1 = y;
+          d[t0 + i] += amp * y * (1 - r) * 4;
+        }
+      }
+      let lp = 0; // 저음 몸통
+      for (let i = 0; i < n; i++) {
+        lp += ((Math.random() * 2 - 1) - lp) * 0.1;
+        d[i] += 0.5 * lp * (1 - Math.exp(-i / (sr * 0.002))) * Math.exp(-i / (n * 0.4));
+      }
+      let pk = 0;
+      for (let i = 0; i < n; i++) pk = Math.max(pk, Math.abs(d[i]));
+      const fade = Math.floor(sr * 0.008);
+      for (let i = 0; i < n; i++) d[i] = (d[i] / (pk || 1)) * 0.9 * (i > n - fade ? (n - i) / fade : 1);
+      return buf;
+    });
+  },
+
+  crunch(vol = 1, pan = 0, rate = 1) {
+    if (!this.ctx || !this.crunchBank) return;
+    const buf = this.crunchBank[Math.floor(Math.random() * this.crunchBank.length)];
+    const r = rate * (0.85 + Math.random() * 0.3);
+    const { out, pn } = this._voice(vol * 0.7, pan);
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf; src.playbackRate.value = r;
+    src.connect(out); src.start();
+    this._release(out, pn, buf.duration / r + 0.1);
+  },
+
+  // 말랑이가 눌릴 때(up=false)와 되돌아올 때(up=true)의 낮고 말랑한 "찌걱" 소리
+  squish(vol = 1, pan = 0, up = false) {
+    const c = this.ctx;
+    if (!c || !this.noise) return;
+    const t = c.currentTime, f0 = up ? 260 : 520, f1 = up ? 620 : 240;
+    const { out, pn } = this._voice(vol * 0.6, pan);
+    const n = this._noise(t, 0.22, 'bandpass', f0, 2.2);
+    n.f.frequency.setValueAtTime(f0, t);
+    n.f.frequency.exponentialRampToValueAtTime(f1, t + 0.12);
+    n.g.gain.setValueAtTime(0.0001, t);
+    n.g.gain.exponentialRampToValueAtTime(0.7, t + 0.012);
+    n.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    n.g.connect(out);
+    this._release(out, pn, 0.45);
+  },
+
+  setMuted(m) {
+    this.muted = m;
+    try { localStorage.setItem('asmrMuted', m ? '1' : '0'); } catch (e) {}
+    if (this.master) this.master.gain.setTargetAtTime(m ? 0 : 0.9, this.ctx.currentTime, 0.02); // 뚝 끊기지 않게
+  },
+
+  setReverb(v) {
+    this.params.reverb = v;
+    if (this.wet) this.wet.gain.value = v;
+  },
+
+  _noise(t, dur, type, freq, q) {
+    const c = this.ctx;
+    const src = c.createBufferSource();
+    src.buffer = this.noise;
+    const f = c.createBiquadFilter();
+    f.type = type;
+    f.frequency.value = freq;
+    if (q) f.Q.value = q;
+    const g = c.createGain();
+    src.connect(f).connect(g);
+    src.start(t, Math.random() * 0.1); // 매번 다른 노이즈 구간
+    src.stop(t + dur);
+    return { f, g };
+  },
+
+  // vol: 0~1, pitch: 1 = 기본, pan: -1~1, delay: 초
+  pop(vol = 1, pitch = 1, pan = 0, delay = 0) {
+    const c = this.ctx;
+    if (!c) return;
+    const P = this.params;
+    const t = c.currentTime + delay;
+    const p = pitch * P.pitch;
+    const { out, pn } = this._voice(vol * 0.6, pan);
+
+    // 1) 트랜지언트: 막이 찢어지는 아주 짧은 클릭
+    const click = this._noise(t, 0.05, 'highpass', 3500 * P.bright);
+    click.g.gain.setValueAtTime(0.0001, t);
+    click.g.gain.exponentialRampToValueAtTime(0.7, t + 0.0005);
+    click.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.012 + Math.random() * 0.006);
+    click.g.connect(out);
+
+    // 2) 공명: 속이 빈 "뽁" 질감 (Q 높은 밴드패스)
+    const f1 = (900 + Math.random() * 600) * p * P.bright;
+    const res = this._noise(t, 0.12, 'bandpass', f1, 6);
+    res.f.frequency.setValueAtTime(f1, t);
+    res.f.frequency.exponentialRampToValueAtTime(f1 * 0.7, t + 0.04);
+    res.g.gain.setValueAtTime(0.0001, t);
+    res.g.gain.exponentialRampToValueAtTime(0.8, t + 0.001);
+    res.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+    res.g.connect(out);
+
+    // 3) 몸통: 살짝 디튠된 두 파형이 빠르게 내려가는 "폭"
+    const f0 = (230 + Math.random() * 40) * p;
+    const bodyGain = c.createGain();
+    bodyGain.gain.setValueAtTime(0.0001, t);
+    bodyGain.gain.exponentialRampToValueAtTime(0.5 * P.body, t + 0.002);
+    bodyGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+    bodyGain.connect(out);
+    [['sine', 1], ['triangle', 1.012]].forEach(([type, ratio]) => {
+      const o = c.createOscillator();
+      o.type = type;
+      o.frequency.setValueAtTime(f0 * ratio, t);
+      o.frequency.exponentialRampToValueAtTime(f0 * ratio * 0.36, t + 0.07);
+      o.connect(bodyGain);
+      o.start(t);
+      o.stop(t + 0.1);
+    });
+
+    // 4) 여운: 공기가 빠지는 소리
+    const tail = this._noise(t, 0.2, 'lowpass', 3000 * P.bright);
+    tail.f.frequency.setValueAtTime(3000 * P.bright, t);
+    tail.f.frequency.exponentialRampToValueAtTime(800, t + 0.1);
+    tail.g.gain.setValueAtTime(0.0001, t);
+    tail.g.gain.exponentialRampToValueAtTime(0.12 * P.tail, t + 0.005);
+    tail.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11 + Math.random() * 0.03);
+    tail.g.connect(out);
+
+    this._release(out, pn, delay + 0.4);
+  },
+
+  // 가끔 섞이는 "빡!": 일반 뽁보다 훨씬 날카롭고 건조하게 갈라지는 소리
+  bak(vol = 1, pan = 0) {
+    const c = this.ctx;
+    if (!c) return;
+    const P = this.params;
+    const t = c.currentTime;
+    const { out, pn } = this._voice(vol * 0.85, pan);
+
+    // 강하고 넓은 대역의 타격 (딱 갈라지는 느낌)
+    const crack = this._noise(t, 0.08, 'highpass', 1800 * P.bright);
+    crack.g.gain.setValueAtTime(0.0001, t);
+    crack.g.gain.exponentialRampToValueAtTime(1, t + 0.0004);
+    crack.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+    crack.g.connect(out);
+
+    // 중고음 몸통: 짧게 꽉 찬 "빡"
+    const f1 = (1800 + Math.random() * 500) * P.pitch;
+    const res = this._noise(t, 0.1, 'bandpass', f1, 2.5);
+    res.g.gain.setValueAtTime(0.0001, t);
+    res.g.gain.exponentialRampToValueAtTime(0.9, t + 0.0008);
+    res.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    res.g.connect(out);
+
+    // 짧고 단단한 저음 타격
+    const lo = c.createOscillator();
+    lo.type = 'sine';
+    lo.frequency.setValueAtTime(190 * P.pitch, t);
+    lo.frequency.exponentialRampToValueAtTime(60, t + 0.05);
+    const lg = c.createGain();
+    lg.gain.setValueAtTime(0.0001, t);
+    lg.gain.exponentialRampToValueAtTime(0.7, t + 0.001);
+    lg.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+    lo.connect(lg).connect(out);
+    lo.start(t);
+    lo.stop(t + 0.08);
+
+    this._release(out, pn, 0.3);
+  },
+
+  // 키보드 소리. kind: KEY_SWITCHES 키, size: 키 너비(1 = 보통 키, 스페이스바 6.25), down: 누름/뗌
+  key(kind, size = 1, down = true, vol = 1, pan = 0) {
+    const c = this.ctx;
+    if (!c) return;
+    const S = KEY_SWITCHES[kind];
+    if (S.sample) return this._sample(size, down, vol, pan);
+    const t = c.currentTime;
+    const { out, pn } = this._voice(vol * 0.7, pan);
+    let dest = out;                           // 청축은 살짝 눌러 주는 곡선을 거친다: 깨지지 않고 꽉 찬 타격감
+    if (S.snappy) {
+      dest = c.createWaveShaper();
+      dest.curve = this._satCurve(); dest.oversample = '2x';
+      dest.connect(out);
+    }
+    const jit = 0.95 + Math.random() * 0.1;   // 칠 때마다 살짝 다르게
+    const sz = Math.pow(size, -0.25);         // 큰 키일수록 낮은 소리
+
+    const env = (g, t0, peak, dur) => {
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t0 + 0.0005);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    };
+    const tick = (t0, f, peak, dur) => {      // 짧은 노이즈 "틱"
+      const n = this._noise(t0, dur + 0.03, 'bandpass', f * jit, 2.5);
+      env(n.g, t0, peak, dur);
+      n.g.connect(dest);
+    };
+    const thump = (t0, f, peak, dur, drop) => { // 빠르게 내려가는 저음 "턱"
+      const o = c.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(f, t0);
+      o.frequency.exponentialRampToValueAtTime(f * drop, t0 + dur * 0.7);
+      const g = c.createGain();
+      env(g, t0, peak, dur);
+      o.connect(g).connect(dest);
+      o.start(t0);
+      o.stop(t0 + dur + 0.02);
+    };
+
+    if (S.snappy) {
+      const G = S.gain || 1, fs = Math.pow(size, -0.1); // 큰 키일수록 아주 조금 낮게
+      // 쓸리듯 훑는 노이즈: 중심 주파수가 f0에서 f1로 빠르게 움직인다 ("찰"의 ㅊ 소리)
+      const sweep = (t0, f0, f1, peak, dur, q) => {
+        const n = this._noise(t0, dur + 0.03, 'bandpass', f0 * jit, q);
+        n.f.frequency.setValueAtTime(f0 * jit, t0);
+        n.f.frequency.exponentialRampToValueAtTime(f1 * jit, t0 + dur);
+        env(n.g, t0, peak, dur);
+        n.g.connect(dest);
+      };
+      if (down) {
+        // 찰: 셔터가 쓸리는 듯한 맑고 밝은 스침 (3.5kHz에서 9kHz로 올라간다)
+        sweep(t, 3500 * fs, 9000 * fs, 1.0 * G, 0.02, 1.5);
+        tick(t, 6000 * fs, 0.6 * G, 0.012, 0.9);
+        // 칵: 약 16ms 뒤 딱 걸리는 청량한 소리. 단단한 클릭 + 금속성 여운 + 반짝이는 고음
+        const tb = t + 0.016;
+        tick(tb, 3600 * fs, 1.0 * G, 0.008, 3.5);
+        tick(tb, 2400 * fs, 0.8 * G, 0.012, 2.2);
+        tick(tb, 5200 * fs, 0.55 * G, 0.025, 10);              // 금속성 여운
+        tick(tb, 7200 * fs, 0.35 * G, 0.03, 12);               // 반짝이는 고음
+        tick(tb, 1500 * fs, 0.55 * G, 0.02, 2.0);              // 타격음 (짧게)
+        thump(tb, 480 * fs * jit, 0.12 * G, 0.015, 0.6);       // 아주 짧은 몸통: 저음이 답답하게 남지 않는다
+        if (size >= 2) tick(tb + 0.012, 2400, 0.16 * G, 0.02);   // 스태빌라이저
+      } else {
+        // 뗄 때도 맑은 "찰칵" 한 번 더
+        sweep(t, 3800 * fs, 8000 * fs, 0.55 * G, 0.014, 1.5);
+        tick(t + 0.012, 3800 * fs, 0.7 * G, 0.007, 3.5);
+        tick(t + 0.012, 5600 * fs, 0.35 * G, 0.014, 10);
+      }
+    } else if (down) {
+      if (S.click > 0.01) {
+        tick(t, S.clickF, S.click, 0.008);
+        if (S.click2) tick(t + 0.008, S.clickF * 0.75, S.click * 0.7, 0.006); // 청축의 두 번 찰칵
+      }
+      const tb = t + S.gap; // 바닥까지 눌리는 순간
+      thump(tb, S.thockF * sz * jit, S.thock, 0.07, 0.5);
+      tick(tb, S.knockF * sz, S.knock, 0.03);
+      if (size >= 2) tick(tb + 0.012, 1800, 0.12, 0.02);                    // 스태빌라이저 달그락
+      if (size >= 6) thump(tb, 95, 0.6, 0.12, 0.6);                          // 스페이스바 묵직함
+    } else {
+      tick(t, Math.max(S.clickF, 2500) * 1.1, S.up, 0.006);
+      thump(t, S.thockF * sz * 1.4, S.up * 0.4, 0.035, 0.6);
+    }
+
+    this._release(out, pn, 0.4);
+  },
+
+  // 목소리 하나(볼륨+패닝+리버브 전송)를 만들고 동시 발음 수를 관리한다
+  _voice(gain, pan) {
+    const c = this.ctx;
+    // 초과하면 가장 오래된 소리를 빠르게 줄인다
+    while (this.voices.length >= this.MAX_VOICES) {
+      const old = this.voices.shift();
+      old.gain.setTargetAtTime(0, c.currentTime, 0.02);
+      setTimeout(() => old.disconnect(), 200);
+    }
+    const out = c.createGain();
+    out.gain.value = gain;
+    const pn = c.createStereoPanner();
+    pn.pan.value = pan;
+    out.connect(pn);
+    pn.connect(this.dry);
+    pn.connect(this.convIn);
+    this.voices.push(out);
+    return { out, pn };
+  },
+
+  _release(out, pn, seconds) {
+    setTimeout(() => {
+      out.disconnect(); pn.disconnect();
+      const i = this.voices.indexOf(out);
+      if (i >= 0) this.voices.splice(i, 1);
+    }, seconds * 1000);
+  },
+};
+
+/* ───────────── 튜닝 패널 (주소 뒤에 ?tune 을 붙이면 표시) ───────────── */
+if (location.search.includes('tune')) {
+  const KEY = 'asmrTune';
+  try { Object.assign(Sound.params, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(Sound.params)); } catch (e) {} };
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;right:12px;bottom:12px;width:220px;padding:12px;border-radius:12px;background:rgba(0,0,0,.55);color:#e8ecf7;font-size:12px;z-index:9';
+  const defs = [
+    ['pitch', '음높이', 0.6, 1.6, 0.01],
+    ['bright', '밝기', 0.5, 1.8, 0.01],
+    ['body', '몸통(저음)', 0, 2, 0.01],
+    ['tail', '여운', 0, 3, 0.01],
+    ['reverb', '울림', 0, 0.5, 0.01],
+  ];
+  for (const [key, label, min, max, step] of defs) {
+    const row = document.createElement('label');
+    row.style.cssText = 'display:block;margin-bottom:6px';
+    const val = document.createElement('span');
+    val.style.float = 'right';
+    val.textContent = Sound.params[key];
+    const input = document.createElement('input');
+    input.type = 'range'; input.min = min; input.max = max; input.step = step;
+    input.value = Sound.params[key];
+    input.style.cssText = 'width:100%;display:block';
+    input.addEventListener('input', () => {
+      const v = parseFloat(input.value);
+      if (key === 'reverb') Sound.setReverb(v); else Sound.params[key] = v;
+      val.textContent = v.toFixed(2);
+      save();
+    });
+    row.append(label, val, input);
+    box.append(row);
+  }
+  const btn = document.createElement('button');
+  btn.textContent = '▶ 소리 듣기';
+  btn.style.cssText = 'width:100%;padding:8px;border:0;border-radius:8px;background:rgba(255,255,255,.18);color:inherit;font:inherit;cursor:pointer';
+  btn.addEventListener('click', () => { Sound.unlock(); Sound.pop(1, 1, 0); });
+  const copy = document.createElement('button');
+  copy.textContent = '📋 값 복사';
+  copy.style.cssText = btn.style.cssText + ';margin-top:6px';
+  copy.addEventListener('click', () => {
+    const text = JSON.stringify(Sound.params);
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(
+      () => { copy.textContent = '복사됨! ' + text; },
+      () => { copy.textContent = text; }
+    );
+  });
+  box.append(btn, copy);
+  document.addEventListener('DOMContentLoaded', () => document.body.append(box));
+}
+
+/* ───────────── 뽁뽁이 씬 ───────────── */
+const BubbleWrap = {
+  bubbles: [],
+  particles: [],
+  popped: 0,
+  lastBak: 0,
+  hint: '터치하거나 드래그해서 터뜨려 보세요',
+  resetLabel: '새 뽁뽁이',
+
+  init(w, h) {
+    this.bubbles = [];
+    this.particles = [];
+    this.popped = 0;
+    const d = Math.max(46, Math.min(72, Math.min(w, h) / 9)); // 지름
+    const r = d / 2;
+    const rowH = d * 0.9;
+    const top = 60, bottom = 40;
+    const rows = Math.max(1, Math.floor((h - top - bottom) / rowH));
+    const cols = Math.max(1, Math.floor((w - 16) / d));
+    const ox = (w - cols * d) / 2 + r;
+    const oy = top + (h - top - bottom - (rows - 1) * rowH) / 2;
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        this.bubbles.push({
+          x: ox + x * d + (y % 2 ? r * 0.5 : 0) - (y % 2 ? r * 0.25 : -r * 0.25),
+          y: oy + y * rowH,
+          r: r * 0.92,
+          popped: false,
+          anim: 1,          // 터진 뒤 0→1 로 진행되는 애니메이션
+        });
+      }
+    }
+    UI.setCount(0, this.bubbles.length);
+  },
+
+  onDown(x, y, speed) { this.hit(x, y, speed); },
+  onMove(x, y, speed) { this.hit(x, y, speed); },
+  onUp() {},
+
+  hit(x, y, speed) {
+    for (const b of this.bubbles) {
+      if (b.popped) continue;
+      const dx = x - b.x, dy = y - b.y;
+      if (dx * dx + dy * dy <= b.r * b.r) this.pop(b, speed);
+    }
+  },
+
+  pop(b, speed) {
+    b.popped = true;
+    b.anim = 0;
+    this.popped++;
+    UI.setCount(this.popped, this.bubbles.length);
+    // 빠르게 문지를수록 세게, 피치는 약간 랜덤
+    const vol = Math.min(1, 0.5 + speed * 0.0004) * (0.85 + Math.random() * 0.15);
+    const pan = Math.max(-0.8, Math.min(0.8, (b.x / W) * 2 - 1));
+    const delay = Math.random() * Math.min(0.008, speed * 0.00001); // 빠른 드래그 시 위상 겹침 방지
+    // 가끔(약 7%) "빡!" 소리. 연달아 나오지 않게 0.5초 간격을 둔다
+    const now = performance.now();
+    if (now - this.lastBak > 500 && Math.random() < 0.07) {
+      this.lastBak = now;
+      Sound.bak(Math.max(0.85, vol), pan);
+    } else {
+      Sound.pop(vol, 0.85 + Math.random() * 0.3, pan, delay);
+    }
+    if (navigator.vibrate) navigator.vibrate(6);
+    for (let i = 0; i < 6; i++) {
+      const a = Math.random() * Math.PI * 2, s = 40 + Math.random() * 90;
+      this.particles.push({ x: b.x, y: b.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1 });
+    }
+  },
+
+  update(dt) {
+    for (const b of this.bubbles) if (b.anim < 1) b.anim = Math.min(1, b.anim + dt * 6);
+    for (const p of this.particles) {
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vx *= 0.9; p.vy *= 0.9;
+      p.life -= dt * 3;
+    }
+    this.particles = this.particles.filter(p => p.life > 0);
+  },
+
+  draw(ctx, w, h) {
+    for (const b of this.bubbles) {
+      if (!b.popped) this.drawIntact(ctx, b);
+      else this.drawPopped(ctx, b);
+    }
+    ctx.fillStyle = '#fff';
+    for (const p of this.particles) {
+      ctx.globalAlpha = Math.max(0, p.life) * 0.7;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  },
+
+  drawIntact(ctx, b) {
+    const g = ctx.createRadialGradient(b.x - b.r * 0.3, b.y - b.r * 0.35, b.r * 0.1, b.x, b.y, b.r);
+    g.addColorStop(0, 'rgba(210,235,255,0.55)');
+    g.addColorStop(0.7, 'rgba(120,170,230,0.28)');
+    g.addColorStop(1, 'rgba(160,205,255,0.55)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(200,225,255,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // 하이라이트
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.beginPath();
+    ctx.ellipse(b.x - b.r * 0.32, b.y - b.r * 0.4, b.r * 0.2, b.r * 0.11, -0.6, 0, Math.PI * 2);
+    ctx.fill();
+  },
+
+  drawPopped(ctx, b) {
+    // 터진 순간 살짝 커졌다가 쪼그라드는 느낌
+    const k = b.anim;
+    const bump = k < 1 ? Math.sin(k * Math.PI) * 0.18 : 0;
+    const r = b.r * (0.86 + bump);
+    ctx.fillStyle = 'rgba(90,110,150,0.22)';
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(200,220,255,0.18)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    // 쭈글쭈글한 주름
+    ctx.strokeStyle = 'rgba(220,235,255,0.22)';
+    ctx.beginPath();
+    ctx.moveTo(b.x - r * 0.45, b.y - r * 0.1);
+    ctx.quadraticCurveTo(b.x, b.y + r * 0.25, b.x + r * 0.4, b.y - r * 0.2);
+    ctx.moveTo(b.x - r * 0.2, b.y + r * 0.35);
+    ctx.lineTo(b.x + r * 0.3, b.y + r * 0.1);
+    ctx.stroke();
+  },
+
+  isDone() { return this.popped === this.bubbles.length && this.bubbles.length > 0; },
+};
+
+/* ───────────── 키보드 씬 ───────────── */
+const KEYBOARD_ROWS = (() => {
+  const K = s => [...s].map(ch => ['Key' + ch, ch]);
+  const D = s => [...s].map(ch => ['Digit' + ch, ch]);
+  return [
+    [['Backquote', '`'], ...D('1234567890'), ['Minus', '-'], ['Equal', '='], ['Backspace', '⌫', 2]],
+    [['Tab', 'Tab', 1.5], ...K('QWERTYUIOP'), ['BracketLeft', '['], ['BracketRight', ']'], ['Backslash', '\\', 1.5]],
+    [['CapsLock', 'Caps', 1.75], ...K('ASDFGHJKL'), ['Semicolon', ';'], ['Quote', "'"], ['Enter', 'Enter', 2.25]],
+    [['ShiftLeft', 'Shift', 2.25], ...K('ZXCVBNM'), ['Comma', ','], ['Period', '.'], ['Slash', '/'], ['ShiftRight', 'Shift', 2.75]],
+    [['ControlLeft', 'Ctrl', 1.25], ['MetaLeft', '⌘', 1.25], ['AltLeft', 'Alt', 1.25], ['Space', '', 6.25],
+     ['AltRight', 'Alt', 1.25], ['MetaRight', '⌘', 1.25], ['ContextMenu', '☰', 1.25], ['ControlRight', 'Ctrl', 1.25]],
+  ];
+})();
+
+function roundRect(ctx, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+const Keyboard = {
+  hint: '키를 누르거나 드래그해 보세요 · 진짜 키보드로도 칠 수 있어요',
+  resetLabel: null,
+  kind: 'real',
+  keys: [],
+  byCode: {},
+  held: new Map(),   // pointerId -> 그 포인터가 누르고 있는 키(없으면 null)
+  presses: 0,
+  u: 0,
+  board: null,
+
+  init(w, h) {
+    this.keys = [];
+    this.byCode = {};
+    this.held.clear();
+    const u = Math.max(14, Math.min(64, (w - 24) / 15.6, (h - 200) / 5.6));
+    const cp = u * 0.3;
+    const bw = 15 * u + cp * 2, bh = 5 * u + cp * 2;
+    const bx = (w - bw) / 2, by = (h - bh) / 2 + 24;
+    this.u = u;
+    this.board = { x: bx, y: by, w: bw, h: bh, r: u * 0.35 };
+    KEYBOARD_ROWS.forEach((row, ri) => {
+      let xu = 0;
+      for (const [code, label, wu = 1] of row) {
+        const cell = { x: bx + cp + xu * u, y: by + cp + ri * u, w: wu * u, h: u };
+        const key = {
+          code, label, wu, cell,
+          mod: wu > 1 && code !== 'Space' || /^(Ctrl|Alt|⌘|☰|Caps)$/.test(label),
+          down: false, owner: null, depth: 0, glow: 0,
+        };
+        this.keys.push(key);
+        this.byCode[code] = key;
+        xu += wu;
+      }
+    });
+    this.updateCount();
+  },
+
+  updateCount() { UI.setText(`${this.presses}번 눌렀어요`); },
+
+  hitTest(x, y) {
+    for (const k of this.keys) {
+      const c = k.cell;
+      if (x >= c.x && x < c.x + c.w && y >= c.y && y < c.y + c.h) return k;
+    }
+    return null;
+  },
+
+  press(key, owner) {
+    if (key.down) return false;
+    key.down = true; key.owner = owner; key.glow = 1;
+    this.presses++;
+    this.updateCount();
+    const cx = key.cell.x + key.cell.w / 2;
+    const pan = Math.max(-0.7, Math.min(0.7, (cx / W) * 2 - 1));
+    Sound.key(this.kind, key.wu, true, 0.75 + Math.random() * 0.25, pan);
+    if (navigator.vibrate) navigator.vibrate(3);
+    return true;
+  },
+
+  release(key, silent) {
+    if (!key.down) return;
+    key.down = false; key.owner = null;
+    if (silent) return;
+    const cx = key.cell.x + key.cell.w / 2;
+    const pan = Math.max(-0.7, Math.min(0.7, (cx / W) * 2 - 1));
+    Sound.key(this.kind, key.wu, false, 0.6, pan);
+  },
+
+  releaseAll() {
+    for (const k of this.keys) this.release(k, true);
+    this.held.clear();
+  },
+
+  // 드래그하면 손가락이 지나가는 키를 차례로 누르고 뗀다
+  onDown(x, y, speed, id) {
+    const k = this.hitTest(x, y);
+    this.held.set(id, k && this.press(k, id) ? k : null);
+  },
+  onMove(x, y, speed, id) {
+    if (!this.held.has(id)) return;
+    const cur = this.held.get(id);
+    const k = this.hitTest(x, y);
+    if (k === cur) return;
+    if (cur) this.release(cur);
+    this.held.set(id, k && this.press(k, id) ? k : null);
+  },
+  onUp(id) {
+    const cur = this.held.get(id);
+    if (cur && cur.owner === id) this.release(cur);
+    this.held.delete(id);
+  },
+
+  // 실제 키보드 (e.code는 물리 키 위치라서 한글 입력 상태에서도 동작한다)
+  onKeyDown(code) {
+    const k = this.byCode[code];
+    if (!k) return false;
+    this.press(k, 'kbd');
+    return true;
+  },
+  onKeyUp(code) {
+    const k = this.byCode[code];
+    if (k && k.owner === 'kbd') this.release(k);
+  },
+
+  mount(sub) {
+    for (const [id, s] of Object.entries(KEY_SWITCHES)) {
+      const b = document.createElement('button');
+      b.className = 'chip' + (id === this.kind ? ' on' : '');
+      b.textContent = s.name;
+      b.addEventListener('click', () => {
+        this.kind = id;
+        sub.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b));
+        Sound.unlock();
+        Sound.key(id, 1, true, 0.8, 0);                       // 미리 듣기
+        setTimeout(() => Sound.key(id, 1, false, 0.6, 0), 110);
+      });
+      sub.append(b);
+    }
+  },
+  unmount() { this.releaseAll(); },
+
+  update(dt) {
+    const k = Math.min(1, dt * 30);
+    for (const key of this.keys) {
+      key.depth += ((key.down ? 1 : 0) - key.depth) * k;
+      if (key.glow > 0) key.glow = Math.max(0, key.glow - dt * 2.5);
+    }
+  },
+
+  draw(ctx) {
+    const b = this.board, u = this.u;
+    // 본체
+    ctx.fillStyle = '#10141f';
+    roundRect(ctx, b.x, b.y + u * 0.08, b.w, b.h, b.r);
+    ctx.fill();
+    const body = ctx.createLinearGradient(0, b.y, 0, b.y + b.h);
+    body.addColorStop(0, '#343c56');
+    body.addColorStop(1, '#262c42');
+    ctx.fillStyle = body;
+    roundRect(ctx, b.x, b.y, b.w, b.h, b.r);
+    ctx.fill();
+    // 키 아래 판
+    const pad = u * 0.18;
+    ctx.fillStyle = '#171b2b';
+    roundRect(ctx, b.x + pad, b.y + pad, b.w - pad * 2, b.h - pad * 2, b.r * 0.6);
+    ctx.fill();
+
+    const gap = u * 0.09, side = u * 0.12, rad = u * 0.16;
+    for (const key of this.keys) {
+      const c = key.cell;
+      const x = c.x + gap / 2, w = c.w - gap, h = c.h - gap - side;
+      const y = c.y + gap / 2 + key.depth * side * 0.85;
+      // 옆면
+      ctx.fillStyle = key.mod ? '#4e5878' : '#a4abc2';
+      roundRect(ctx, x, y + side * (1 - key.depth * 0.85), w, h, rad);
+      ctx.fill();
+      // 윗면 (눌리면 살짝 따뜻하게 빛남)
+      ctx.fillStyle = key.mod ? '#7c86a6' : '#e3e6f0';
+      roundRect(ctx, x, y, w, h, rad);
+      ctx.fill();
+      if (key.glow > 0) {
+        ctx.fillStyle = `rgba(255,205,130,${key.glow * 0.55})`;
+        roundRect(ctx, x, y, w, h, rad);
+        ctx.fill();
+      }
+      if (key.label) {
+        ctx.fillStyle = key.mod ? '#1c2135' : '#2b3147';
+        ctx.font = `${Math.round(u * (key.label.length > 1 ? 0.25 : 0.34))}px -apple-system, "Apple SD Gothic Neo", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(key.label, x + w / 2, y + h / 2);
+      }
+    }
+  },
+};
+
+/* ───────────── 낙엽 씬 ───────────── */
+// 낙엽 종류별 색: 단풍은 붉게, 은행은 노랗게, 참나무는 갈색으로
+const LEAF_TYPES = {
+  oval:   ['#c8501e', '#d9822b', '#e2a93b', '#a63a1c', '#8a5a2b', '#b8862f'],
+  maple:  ['#c8501e', '#a63a1c', '#cf6a2a', '#b53a24'],
+  ginkgo: ['#e2c23b', '#d9b02b', '#e8cf55'],
+  oak:    ['#8a5a2b', '#9c4a1a', '#b8862f', '#7a4a22'],
+  elm:    ['#d9822b', '#b8862f', '#e2a93b', '#c8701e'],
+};
+
+function hexToHsl(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+  let h = 0, s = 0;
+  if (mx !== mn) {
+    const d = mx - mn;
+    s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h *= 60;
+  }
+  return [h, s * 100, l * 100];
+}
+
+const Leaves = {
+  hint: '낙엽을 클릭하거나 드래그해서 바스락 부숴 보세요',
+  resetLabel: '다시 뿌리기',
+  pieces: [],   // 부술 수 있는 낙엽/조각
+  dust: [],     // 튀는 가루
+  crushed: 0,
+
+  rand(a, b) { return a + Math.random() * (b - a); },
+  randInt(n) { return Math.floor(Math.random() * n); },
+
+  // 낙엽 윤곽선(로컬 좌표, 잎끝이 위쪽 -y). 종류마다 모양이 다르다.
+  outline(type, r) {
+    const pts = [];
+    if (type === 'maple') {          // 단풍잎: 뾰족한 5갈래
+      const S = 1.25, off = 0.35 * r;
+      const spec = [[0, 1], [17, 0.52], [48, 0.95], [70, 0.5], [98, 0.74], [128, 0.4], [160, 0.34], [180, 0.3]];
+      const half = spec.map(([d, k]) => { const a = d * Math.PI / 180; return [Math.sin(a) * k * r * S, -Math.cos(a) * k * r * S + off]; });
+      for (const q of half) pts.push(q);
+      for (let i = half.length - 2; i >= 1; i--) pts.push([-half[i][0], half[i][1]]);
+    } else if (type === 'ginkgo') {  // 은행잎: 가운데가 살짝 갈라진 부채꼴
+      const B = [0, r * 0.7], R = r * 1.4, phi = 48 * Math.PI / 180, n = 32;
+      pts.push(B);
+      for (let i = 0; i <= n; i++) {
+        const a = -phi + 2 * phi * i / n, d = Math.abs(a);
+        const rad = d < 0.13 ? R * (0.72 + 0.28 * d / 0.13) : R;
+        pts.push([B[0] + Math.sin(a) * rad, B[1] - Math.cos(a) * rad]);
+      }
+    } else {                         // 타원형 · 참나무(물결 모양 가장자리) · 느릅나무(톱니 모양 가장자리)
+      const n = 72, right = [];
+      for (let i = 0; i <= n; i++) {
+        const t = i / n, base = Math.sin(Math.PI * Math.pow(t, 0.8));
+        let w = 0.66 * base;
+        if (type === 'oak') w *= 1 + 0.36 * Math.sin(t * Math.PI * 8 - 0.4) * Math.min(1, t * 5, (1 - t) * 5);
+        else if (type === 'elm') w = 0.6 * base * (1 + 0.14 * (1 - ((t * 26) % 1)));
+        else w = 0.66 * Math.sin(Math.PI * Math.pow(t, 0.85));
+        right.push([w * r, -r + t * 1.9 * r]);
+      }
+      for (const q of right) pts.push(q);
+      for (let i = right.length - 2; i >= 1; i--) pts.push([-right[i][0], right[i][1]]);
+    }
+    return pts;
+  },
+
+  inPoly(poly, x, y) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, yi] = poly[i], [xj, yj] = poly[j];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  },
+
+  // 텍스처용 캔버스 (화면 배율에 맞춰 선명하게)
+  mkCanvas(wCss, hCss) {
+    const s = Math.min(2, window.devicePixelRatio || 1);
+    const cv = document.createElement('canvas');
+    cv.width = Math.ceil(wCss * s); cv.height = Math.ceil(hCss * s);
+    const c = cv.getContext('2d');
+    c.scale(s, s);
+    return { cv, c };
+  },
+
+  drawPath(c, poly) {
+    c.beginPath();
+    poly.forEach(([x, y], i) => { if (i) c.lineTo(x, y); else c.moveTo(x, y); });
+    c.closePath();
+  },
+
+  // 잎맥: 어두운 선 + 살짝 밝은 선을 겹쳐 볼록한 느낌을 낸다
+  drawVeins(c, type, r) {
+    const build = () => {
+      c.beginPath();
+      if (type === 'maple') {
+        const S = 1.25, off = 0.35 * r;
+        for (const [d, k] of [[0, 1], [48, 0.95], [-48, 0.95], [98, 0.74], [-98, 0.74]]) {
+          const a = d * Math.PI / 180, ex = Math.sin(a) * k * r * S * 0.9, ey = -Math.cos(a) * k * r * S * 0.9 + off;
+          c.moveTo(0, 0.55 * r); c.lineTo(ex, ey);
+          // 갈래마다 잔가지
+          for (const f of [0.45, 0.7]) {
+            const bx = ex * f, by = 0.55 * r + (ey - 0.55 * r) * f;
+            c.moveTo(bx, by); c.lineTo(bx + ey * 0.0 + (Math.cos(a) * 0.16 * r), by + Math.sin(a) * 0.16 * r - 0.1 * r);
+            c.moveTo(bx, by); c.lineTo(bx - (Math.cos(a) * 0.16 * r), by - Math.sin(a) * 0.16 * r - 0.1 * r);
+          }
+        }
+        c.moveTo(0, 0.55 * r); c.lineTo(0, 1.12 * r);
+      } else if (type === 'ginkgo') {
+        const B = [0, r * 0.7];
+        for (let d = -42; d <= 42; d += 10.5) {
+          const a = d * Math.PI / 180;
+          c.moveTo(B[0], B[1]); c.lineTo(Math.sin(a) * r * 1.3, B[1] - Math.cos(a) * r * 1.3);
+        }
+        c.moveTo(B[0], B[1]); c.lineTo(0, B[1] + 0.4 * r);
+      } else {
+        const pairs = type === 'elm' ? 7 : 5;
+        c.moveTo(0, r * 1.18); c.lineTo(0, -r * 0.88);
+        for (let i = 1; i <= pairs; i++) {
+          const y = r * 0.62 - (i * 1.25 * r) / pairs;
+          const w = r * 0.52 * Math.sin(Math.PI * Math.min(1, (y + r) / (1.9 * r)));
+          for (const sg of [1, -1]) {
+            c.moveTo(0, y + r * 0.1); c.lineTo(sg * w, y - r * 0.22);
+            for (const f of [0.4, 0.7]) { // 곁가지
+              const bx = sg * w * f, by = y + r * 0.1 + (-r * 0.32) * f;
+              c.moveTo(bx, by); c.lineTo(bx + sg * w * 0.28, by - r * 0.1);
+            }
+          }
+        }
+      }
+    };
+    c.lineCap = 'round';
+    c.save(); c.translate(0.9, 0.9); build();
+    c.strokeStyle = 'rgba(255,240,200,0.22)'; c.lineWidth = Math.max(1, r / 50); c.stroke(); c.restore();
+    build();
+    c.strokeStyle = 'rgba(50,22,5,0.42)'; c.lineWidth = Math.max(1, r / 58); c.stroke();
+  },
+
+  // 낙엽 한 장의 그림을 미리 그려 둔다: 색 변화, 얼룩, 잔점, 볼록한 잎맥, 마른 테두리, 줄기
+  renderLeafTex(type, r, color, outline) {
+    const E = Math.ceil(r * 1.35);
+    const { cv, c } = this.mkCanvas(2 * E, 2 * E);
+    c.translate(E, E);
+    const [h, sat, l] = hexToHsl(color);
+    c.save();
+    this.drawPath(c, outline); c.clip();
+    const g = c.createLinearGradient(-r, -r, r, r);
+    g.addColorStop(0, `hsl(${h - 10} ${sat}% ${Math.min(80, l + 10)}%)`);
+    g.addColorStop(0.5, `hsl(${h} ${sat}% ${l}%)`);
+    g.addColorStop(1, `hsl(${h + 9} ${sat * 0.92}% ${Math.max(15, l - 9)}%)`);
+    c.fillStyle = g; c.fillRect(-E, -E, 2 * E, 2 * E);
+    const rg = c.createRadialGradient(0, 0.1 * r, r * 0.3, 0, 0.1 * r, r * 1.15);
+    rg.addColorStop(0, 'rgba(255,240,200,0.10)'); rg.addColorStop(1, 'rgba(40,15,0,0.38)');
+    c.fillStyle = rg; c.fillRect(-E, -E, 2 * E, 2 * E);
+    // 마르고 그을린 얼룩
+    for (let i = 0; i < 10; i++) {
+      const x = this.rand(-r * 0.8, r * 0.8), y = this.rand(-r * 0.8, r * 0.9), rad = this.rand(0.08, 0.22) * r;
+      const bg = c.createRadialGradient(x, y, 0, x, y, rad);
+      const dark = i < 7;
+      bg.addColorStop(0, dark ? 'rgba(60,25,5,0.18)' : 'rgba(255,225,160,0.12)'); bg.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = bg; c.beginPath(); c.arc(x, y, rad, 0, Math.PI * 2); c.fill();
+    }
+    this.drawVeins(c, type, r);
+    // 잔점 (질감)
+    const n = Math.round((r * r) / 12);
+    for (let i = 0; i < n; i++) {
+      c.fillStyle = Math.random() < 0.6 ? `rgba(45,20,5,${this.rand(0.05, 0.2)})` : `rgba(255,235,190,${this.rand(0.04, 0.14)})`;
+      c.beginPath(); c.arc(this.rand(-E, E), this.rand(-E, E), this.rand(0.4, 1.5), 0, Math.PI * 2); c.fill();
+    }
+    // 마른 가장자리
+    this.drawPath(c, outline);
+    c.lineWidth = r * 0.09; c.strokeStyle = 'rgba(50,20,0,0.28)'; c.stroke();
+    c.restore();
+    // 윤곽선과 줄기
+    c.lineJoin = 'round'; c.lineCap = 'round';
+    const stem = type === 'maple' ? [0.72, 1.15] : type === 'ginkgo' ? [0.7, 1.12] : [0.9, 1.2];
+    c.strokeStyle = `hsl(${h} ${sat * 0.6}% ${Math.max(12, l - 22)}%)`; c.lineWidth = Math.max(1.5, r / 26);
+    c.beginPath(); c.moveTo(0, stem[0] * r); c.lineTo(0, stem[1] * r); c.stroke();
+    this.drawPath(c, outline);
+    c.lineWidth = Math.max(1.2, r / 60); c.strokeStyle = 'rgba(30,12,0,0.55)'; c.stroke();
+    return { cv, ox: E, oy: E, w: 2 * E, h: 2 * E };
+  },
+
+  makeLeaf(x, y, r, type, color, rot) {
+    const outline = this.outline(type, r);
+    return {
+      x, y, r, level: 0, rot, type, color, vx: 0, vy: 0, vr: 0, age: 1, dead: false,
+      tex: this.renderLeafTex(type, r, color, outline),
+      inside: (px, py) => this.inPoly(outline, px, py),
+    };
+  },
+
+  // 울퉁불퉁하게 찢어진 조각의 윤곽
+  jagged(R) {
+    const n = 8 + this.randInt(4), base = [];
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + this.rand(-0.2, 0.2), rad = R * this.rand(0.72, 1.08);
+      base.push([Math.cos(a) * rad, Math.sin(a) * rad]);
+    }
+    const out = [];
+    for (let i = 0; i < n; i++) { // 변마다 중간 점을 흔들어 찢어진 느낌을 낸다
+      const [x1, y1] = base[i], [x2, y2] = base[(i + 1) % n];
+      out.push([x1, y1]);
+      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, len = Math.hypot(x2 - x1, y2 - y1);
+      const nx = -(y2 - y1) / (len || 1), ny = (x2 - x1) / (len || 1), j = this.rand(-0.16, 0.16) * len;
+      out.push([mx + nx * j, my + ny * j]);
+    }
+    return out;
+  },
+
+  // 부모 그림에서 (cx, cy) 주변을 찢어 낸 조각. 잎맥, 얼룩, 색이 그대로 따라온다.
+  cutPiece(parent, cx, cy, Rc, level) {
+    const Rk = Math.ceil(Rc * 1.3);
+    const poly = this.jagged(Rc);
+    const { cv, c } = this.mkCanvas(2 * Rk, 2 * Rk);
+    c.translate(Rk, Rk);
+    c.save();
+    this.drawPath(c, poly); c.clip();
+    const T = parent.tex;
+    c.drawImage(T.cv, -T.ox - cx, -T.oy - cy, T.w, T.h);
+    // 종이처럼 살짝 휜 느낌의 명암
+    const a = this.rand(0, Math.PI * 2), gx = Math.cos(a) * Rc, gy = Math.sin(a) * Rc;
+    const g = c.createLinearGradient(-gx, -gy, gx, gy);
+    g.addColorStop(0, 'rgba(255,255,255,0.07)'); g.addColorStop(1, 'rgba(0,0,0,0.2)');
+    c.globalCompositeOperation = 'source-atop';
+    c.fillStyle = g; c.fillRect(-Rk, -Rk, 2 * Rk, 2 * Rk);
+    c.restore();
+    // 찢어진 가장자리: 밝게 마른 테두리 (이미 그려진 부분 위에만 칠한다)
+    c.globalCompositeOperation = 'source-atop';
+    c.lineJoin = 'round';
+    this.drawPath(c, poly);
+    c.strokeStyle = 'rgba(120,80,35,0.35)'; c.lineWidth = 5; c.stroke();   // 마르고 바랜 가장자리 띠
+    c.strokeStyle = 'rgba(35,15,3,0.6)'; c.lineWidth = 2.2; c.stroke();     // 얇고 어두운 윤곽
+    const cs = Math.cos(parent.rot), sn = Math.sin(parent.rot);
+    return {
+      x: parent.x + cx * cs - cy * sn, y: parent.y + cx * sn + cy * cs,
+      r: Rc * 0.9, level, rot: parent.rot, color: parent.color, type: null,
+      vx: 0, vy: 0, vr: this.rand(-2.5, 2.5), age: 0, dead: false,
+      tex: { cv, ox: Rk, oy: Rk, w: 2 * Rk, h: 2 * Rk },
+      inside: (px, py) => this.inPoly(poly, px, py) && parent.inside(px + cx, py + cy),
+    };
+  },
+
+  pickCenters(p, n, Rc) {
+    const out = [], ext = p.tex.w / 2;
+    for (let t = 0; t < 90 && out.length < n; t++) {
+      const x = this.rand(-ext, ext), y = this.rand(-ext, ext);
+      if (!p.inside(x, y)) continue;
+      const minD = t < 45 ? Rc * 1.0 : Rc * 0.55;
+      if (out.every(q => Math.hypot(q[0] - x, q[1] - y) >= minD)) out.push([x, y]);
+    }
+    if (!out.length) out.push([0, 0]);
+    return out;
+  },
+
+  init(w, h) {
+    this.pieces = [];
+    this.dust = [];
+    this.crushed = 0;
+    const count = 3 + this.randInt(2); // 3~4장
+    const top = 70; // 상단 메뉴 아래부터
+    const types = Object.keys(LEAF_TYPES);
+    for (let i = 0; i < count; i++) {
+      // 화면 크기에 비례하는 큰 낙엽. 서로 너무 겹치지 않게 몇 번 다시 뽑는다.
+      const r = Math.max(60, Math.min(180, Math.min(w, h - top) * this.rand(0.24, 0.32)));
+      let x, y;
+      for (let tries = 0; tries < 60; tries++) {
+        x = this.rand(r * 1.15, w - r * 1.15);   // 회전해도 잎끝(r)과 줄기(1.15r)가 화면 안에 들어오게
+        y = this.rand(top + r * 1.15, h - r * 1.15);
+        if (this.pieces.every(q => Math.hypot(q.x - x, q.y - y) > (q.r + r) * 0.85)) break;
+      }
+      const type = types[this.randInt(types.length)], colors = LEAF_TYPES[type];
+      this.pieces.push(this.makeLeaf(x, y, r, type, colors[this.randInt(colors.length)], this.rand(0, Math.PI * 2)));
+    }
+    this.updateUI();
+  },
+
+  updateUI() {
+    UI.setText(`${this.crushed}번 바스락`);
+    UI.resetBtn.classList.toggle('pulse', this.pieces.length === 0);
+  },
+
+  onDown(x, y, speed) { this.hit(x, y, speed); },
+  onMove(x, y, speed) { this.hit(x, y, speed); },
+  onUp() {},
+
+  hit(x, y, speed) {
+    // 위에 놓인(나중에 그려진) 것부터 검사한다
+    for (let i = this.pieces.length - 1; i >= 0; i--) {
+      const p = this.pieces[i];
+      if (p.dead || p.age < 0.18) continue; // 방금 갈라진 조각은 잠깐 봐준다
+      const dx = x - p.x, dy = y - p.y, rr = p.r * (p.level === 0 ? 0.8 : 0.95);
+      if (dx * dx + dy * dy <= rr * rr) this.crush(p, speed);
+    }
+    this.pieces = this.pieces.filter(p => !p.dead);
+  },
+
+  crush(p, speed) {
+    p.dead = true;
+    this.crushed++;
+    const vol = Math.min(1, 0.55 + speed * 0.0003) * this.rand(0.85, 1);
+    const pan = Math.max(-0.8, Math.min(0.8, (p.x / W) * 2 - 1));
+    Sound.leaf(p.level, vol, pan);
+    if (navigator.vibrate) navigator.vibrate(p.level === 0 ? 8 : 4);
+    if (p.level < 2) { // 부서지면 원래 그림을 이어받은 조각들과 잔조각으로 갈라진다
+      const big = p.level === 0;
+      const Rc = p.r * (big ? 0.55 : 0.6);
+      const make = (centers, R, level) => {
+        for (const [cx, cy] of centers) {
+          const c = this.cutPiece(p, cx, cy, R, level);
+          const dx = c.x - p.x, dy = c.y - p.y, d = Math.hypot(dx, dy) || 1, sp = this.rand(1.2, 2.4) * p.r;
+          c.vx = (dx / d) * sp + this.rand(-25, 25); c.vy = (dy / d) * sp + this.rand(-25, 25);
+          this.pieces.push(c);
+        }
+      };
+      make(this.pickCenters(p, big ? 3 + this.randInt(2) : 2 + this.randInt(2), Rc), Rc, p.level + 1);
+      make(this.pickCenters(p, big ? 4 : 3, Rc * 0.5), Rc * 0.5, 2); // 잔조각
+    }
+    const dn = p.level === 2 ? 8 : 16, k = Math.min(3, Math.max(1, p.r / 45));
+    for (let i = 0; i < dn; i++) {
+      const a = this.rand(0, Math.PI * 2), sp = this.rand(40, 160) * Math.max(1, p.r / 60);
+      this.dust.push({ x: p.x, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, s: this.rand(1.5, 3.4) * k,
+        rot: this.rand(0, Math.PI * 2), life: 1, color: Math.random() < 0.25 ? '#e9cf9c' : p.color });
+    }
+    if (this.dust.length > 500) this.dust.splice(0, this.dust.length - 500);
+    this.updateUI();
+  },
+
+  update(dt) {
+    for (const p of this.pieces) {
+      p.age += dt;
+      p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+      const k = Math.pow(0.04, dt); // 마찰
+      p.vx *= k; p.vy *= k; p.vr *= k;
+    }
+    for (const d of this.dust) {
+      d.x += d.vx * dt; d.y += d.vy * dt; d.rot += dt * 3;
+      d.vx *= Math.pow(0.02, dt); d.vy *= Math.pow(0.02, dt);
+      d.life -= dt * 0.35; // 바닥에 남았다가 천천히 사라진다
+    }
+    this.dust = this.dust.filter(d => d.life > 0);
+  },
+
+  draw(ctx, w, h) {
+    // 땅
+    const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.75);
+    g.addColorStop(0, '#33281d');
+    g.addColorStop(1, '#1b1510');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+    // 가루: 작은 삼각형 부스러기
+    for (const d of this.dust) {
+      ctx.globalAlpha = Math.min(1, d.life * 1.5) * 0.9;
+      ctx.fillStyle = d.color;
+      ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.rot);
+      ctx.beginPath(); ctx.moveTo(-d.s * 0.6, d.s * 0.4); ctx.lineTo(d.s * 0.7, 0); ctx.lineTo(-d.s * 0.2, -d.s * 0.7); ctx.closePath();
+      ctx.fill(); ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+    // 낙엽과 조각: 바닥에 그림자가 살짝 진다
+    const dpr = window.devicePixelRatio || 1;
+    for (const p of this.pieces) {
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.4)';
+      ctx.shadowBlur = (p.level === 0 ? 8 : 4) * dpr;
+      ctx.shadowOffsetY = (p.level === 0 ? 4 : 2) * dpr;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.drawImage(p.tex.cv, -p.tex.ox, -p.tex.oy, p.tex.w, p.tex.h);
+      ctx.restore();
+    }
+  },
+};
+
+/* ───────────── 크런치 말랑이 씬 ───────────── */
+const SQUISH_COLORS = [
+  { name: '분홍',   light: '#ffe0ec', base: '#ff8fb8', dark: '#d94a86', bead: '200,60,110' },
+  { name: '민트',   light: '#dcfff2', base: '#7fe3c0', dark: '#2fae8a', bead: '30,120,90' },
+  { name: '노랑',   light: '#fff6c9', base: '#ffd96a', dark: '#d9a520', bead: '150,100,10' },
+  { name: '보라',   light: '#efe3ff', base: '#b99cff', dark: '#7a54d6', bead: '90,50,170' },
+  { name: '하늘',   light: '#dff2ff', base: '#84c8ff', dark: '#3b86d4', bead: '30,80,150' },
+];
+
+const Squishy = {
+  hint: '꾹 누르거나 문질러서 마음대로 찌그러뜨려 보세요',
+  resetLabel: '초기화',
+  N: 72,               // 윤곽 점 개수
+  r: null, v: null,    // 각 점의 반지름과 속도 (스프링)
+  rest: null,          // 각 점의 "기억된" 반지름: 눌러서 찌그러진 모양이 여기에 남는다
+  bent: false,
+  R: 100, cx: 0, cy: 0,
+  off: [0, 0], offv: [0, 0],
+  touches: new Map(),
+  beads: [],
+  color: SQUISH_COLORS[0],
+  count: 0,
+  time: 0,
+
+  init(w, h) {
+    this.R = Math.min(190, Math.min(w * 0.36, (h - 160) * 0.34));
+    this.cx = w / 2; this.cy = h / 2 + 30;
+    this.r = new Float32Array(this.N).fill(this.R);
+    this.rest = new Float32Array(this.N).fill(this.R);
+    this.bent = false;
+    this.count = 0;
+    this.v = new Float32Array(this.N);
+    this.off = [0, 0]; this.offv = [0, 0];
+    this.touches.clear();
+    // 안에 들어 있는 바삭한 알갱이들 (극좌표로 저장해서 덩어리가 찌그러지면 함께 움직인다)
+    this.beads = Array.from({ length: 150 }, () => ({
+      rho: Math.sqrt(Math.random()) * 0.93, th: Math.random() * Math.PI * 2,
+      s: 1.5 + Math.random() * 4.5, light: Math.random() < 0.6, a: 0.22 + Math.random() * 0.3,
+    }));
+    this.updateUI();
+  },
+
+  updateUI() { UI.setText(`${this.count}번 꾹`); },
+
+  // 초기화: 기억된 모양을 지우면 스프링이 출렁이며 원래 동그란 모양으로 되돌린다
+  reset() {
+    this.rest.fill(this.R);
+    this.count = 0;
+    this.updateUI();
+    Sound.squish(0.9, 0, true);
+    Sound.crunch(0.6, 0);
+    if (navigator.vibrate) navigator.vibrate(8);
+  },
+
+  // 각도 th 방향의 현재 반지름 (점 사이를 보간)
+  radiusAt(th) {
+    const N = this.N, f = ((th / (Math.PI * 2)) % 1 + 1) % 1 * N, i = Math.floor(f), t = f - i;
+    return this.r[i % N] * (1 - t) + this.r[(i + 1) % N] * t;
+  },
+
+  onDown(x, y, speed, id) {
+    const dx = x - (this.cx + this.off[0]), dy = y - (this.cy + this.off[1]);
+    const d = Math.hypot(dx, dy), rr = this.radiusAt(Math.atan2(dy, dx) + Math.PI / 2);
+    if (d > rr * 1.08) return; // 덩어리 바깥은 무시
+    Sound.squish(0.8, this.pan(x), false);
+    Sound.crunch(0.9, this.pan(x));
+    if (navigator.vibrate) navigator.vibrate(5);
+    this.count++; this.updateUI();
+    this.touches.set(id, { x, y, press: 0, prev: 0, moved: 0, down: true, acc: 0 });
+  },
+  onMove(x, y, speed, id) {
+    const t = this.touches.get(id);
+    if (!t || !t.down) return;
+    t.moved += Math.hypot(x - t.x, y - t.y);
+    t.x = x; t.y = y;
+  },
+  onUp(id) {
+    const t = this.touches.get(id);
+    if (!t || !t.down) return;
+    t.down = false;
+    Sound.squish(0.6 * Math.max(0.4, t.press), this.pan(t.x), true); // 손을 떼면 폭신하게 되돌아오는 소리
+    Sound.crunch(0.45, this.pan(t.x), 1.15);
+  },
+  pan(x) { return Math.max(-0.7, Math.min(0.7, (x / W) * 2 - 1)); },
+  unmount() { this.touches.clear(); },
+
+  update(dt) {
+    dt = Math.min(dt, 0.033);
+    this.time += dt;
+    const N = this.N, R = this.R, ox = this.cx + this.off[0], oy = this.cy + this.off[1];
+    const active = [...this.touches.values()];
+    // 누르는 세기: 누르는 동안 빠르게 올라가고, 떼면 빠르게 내려간다
+    for (const [id, t] of this.touches) {
+      t.prev = t.press;
+      t.press += ((t.down ? 1 : 0) - t.press) * Math.min(1, dt * (t.down ? 14 : 20));
+      // 소리: 누르는 중 세기가 변하거나 문지를 때만 바삭한 알갱이가 터진다
+      if (t.down) {
+        const pressRate = Math.max(0, (t.press - t.prev) / dt), moveRate = (t.moved / dt) * t.press;
+        const rate = Math.min(30, pressRate * 1.5 + moveRate / 60);
+        t.acc += rate * dt; t.moved = 0;
+        while (t.acc >= 1) {
+          t.acc -= 1;
+          Sound.crunch(Math.min(1, 0.4 + rate * 0.03) * (0.8 + Math.random() * 0.3), this.pan(t.x));
+        }
+      }
+      if (!t.down && t.press < 0.02) this.touches.delete(id);
+    }
+    // 전체 찌그러짐: 손가락 쪽으로 납작하게 눌리고 옆으로 퍼진다. 가운데를 누를수록 크게 눌린다.
+    let gs = 0, ax = 0, ay = -1;
+    if (active.length) {
+      const t = active[0], dx = t.x - ox, dy = t.y - oy, dist = Math.hypot(dx, dy);
+      gs = t.press * (0.3 + 0.7 * Math.max(0, 1 - dist / R));
+      if (dist > R * 0.25) { ax = dx / dist; ay = dy / dist; }   // 손가락이 있는 방향으로 눌린다 (가운데면 위에서 아래로)
+    }
+    const sA = 1 - 0.24 * gs, sP = 1 + 0.13 * gs;
+    // 각 점의 목표 반지름: 손가락 근처는 안으로 눌리고, 나머지는 살짝 부풀어 부피를 지킨다
+    const sigma = R * 0.55;
+    for (let step = 0; step < 2; step++) {
+      const h = dt / 2;
+      for (let i = 0; i < N; i++) {
+        const th = (i / N) * Math.PI * 2, ux = Math.sin(th), uy = -Math.cos(th);
+        const bx = ox + R * ux, by = oy + R * uy;
+        let dent = 0, bulge = 0;
+        for (const t of active) {
+          const d = Math.hypot(bx - t.x, by - t.y), w = Math.exp(-(d / sigma) * (d / sigma));
+          dent += t.press * w * R * 0.5;
+          bulge += t.press * (1 - w) * R * 0.045;
+        }
+        const cA = ux * ax + uy * ay, sq = 1 / Math.sqrt((cA / sA) * (cA / sA) + ((1 - cA * cA) / (sP * sP)));
+        // eff: 지금 누르고 있어서 생기는 변화. 눌린 채 시간이 지나면 이 중 일부가 rest(기억된 모양)에 쌓여서
+        // 손을 떼도 찌그러진 채로 남는다.
+        const eff = R * (sq - 1) - dent + bulge;
+        const target = Math.max(R * 0.35, this.rest[i] + eff + Math.sin(this.time * 1.6 + th * 3) * R * 0.004);
+        this.rest[i] = Math.min(R * 1.4, Math.max(R * 0.42, this.rest[i] + eff * 1.4 * h));
+        const l = this.r[(i + N - 1) % N], rt = this.r[(i + 1) % N];
+        const a = 260 * (target - this.r[i]) - 14 * this.v[i] + 120 * (l + rt - 2 * this.r[i]);
+        this.v[i] += a * h;
+        this.r[i] += this.v[i] * h;
+      }
+      // 덩어리 전체가 손가락을 살짝 따라간다
+      let tx = 0, ty = 0;
+      if (active.length) {
+        const t = active[0];
+        tx = Math.max(-R * 0.18, Math.min(R * 0.18, (t.x - this.cx) * 0.14 * t.press));
+        ty = Math.max(-R * 0.18, Math.min(R * 0.18, (t.y - this.cy) * 0.14 * t.press));
+      }
+      this.offv[0] += (170 * (tx - this.off[0]) - 12 * this.offv[0]) * h;
+      this.offv[1] += (170 * (ty - this.off[1]) - 12 * this.offv[1]) * h;
+      this.off[0] += this.offv[0] * h; this.off[1] += this.offv[1] * h;
+    }
+    // 기억된 모양의 뾰족한 부분을 조금씩 매끄럽게 (반죽이 눌린 것처럼)
+    const kd = Math.min(1, dt * 6) * 0.25, tmp = new Float32Array(N);
+    for (let i = 0; i < N; i++) tmp[i] = this.rest[i] + kd * ((this.rest[(i + N - 1) % N] + this.rest[(i + 1) % N]) / 2 - this.rest[i]);
+    this.rest = tmp;
+    // 많이 찌그러졌으면 초기화 버튼이 깜빡인다
+    let dev = 0;
+    for (let i = 0; i < N; i++) dev += Math.abs(this.rest[i] - R);
+    const bent = dev / N / R > 0.12;
+    if (bent !== this.bent) { this.bent = bent; UI.resetBtn.classList.toggle('pulse', bent); }
+  },
+
+  draw(ctx, w, h) {
+    const N = this.N, R = this.R, ox = this.cx + this.off[0], oy = this.cy + this.off[1], C = this.color;
+    // 배경
+    const bg = ctx.createRadialGradient(w / 2, h * 0.45, 0, w / 2, h * 0.45, Math.max(w, h) * 0.8);
+    bg.addColorStop(0, '#3a2c55'); bg.addColorStop(1, '#1d1730');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+    // 바닥 그림자
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.beginPath(); ctx.ellipse(this.cx + this.off[0] * 0.5, this.cy + R * 1.02, R * 0.95, R * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+    // 윤곽 (점들을 부드러운 곡선으로 잇는다)
+    const pts = [];
+    for (let i = 0; i < N; i++) { const th = (i / N) * Math.PI * 2; pts.push([ox + this.r[i] * Math.sin(th), oy - this.r[i] * Math.cos(th)]); }
+    const path = () => {
+      ctx.beginPath();
+      const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], m0 = mid(pts[N - 1], pts[0]);
+      ctx.moveTo(m0[0], m0[1]);
+      for (let i = 0; i < N; i++) { const p = pts[i], m = mid(p, pts[(i + 1) % N]); ctx.quadraticCurveTo(p[0], p[1], m[0], m[1]); }
+      ctx.closePath();
+    };
+    // 몸통
+    path();
+    const g = ctx.createRadialGradient(ox - R * 0.3, oy - R * 0.4, R * 0.1, ox, oy, R * 1.25);
+    g.addColorStop(0, C.light); g.addColorStop(0.45, C.base); g.addColorStop(1, C.dark);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.save(); path(); ctx.clip();
+    // 속에 든 바삭한 알갱이들
+    for (const b of this.beads) {
+      const rr = this.radiusAt(b.th) * b.rho, th = b.th;
+      const x = ox + rr * Math.sin(th), y = oy - rr * Math.cos(th);
+      ctx.fillStyle = b.light ? `rgba(255,255,255,${b.a})` : `rgba(${C.bead},${b.a * 0.7})`;
+      ctx.beginPath(); ctx.arc(x, y, b.s * (R / 150), 0, Math.PI * 2); ctx.fill();
+    }
+    // 손가락이 누른 자리: 어둡게 파이고 가장자리는 밝게 솟는다
+    for (const t of this.touches.values()) {
+      const p = t.press; if (p < 0.02) continue;
+      const rad = R * 0.5;
+      const dg = ctx.createRadialGradient(t.x, t.y, 0, t.x, t.y, rad);
+      dg.addColorStop(0, `rgba(60,10,40,${0.3 * p})`); dg.addColorStop(0.7, `rgba(60,10,40,${0.1 * p})`); dg.addColorStop(1, 'rgba(60,10,40,0)');
+      ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(t.x, t.y, rad, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = `rgba(255,255,255,${0.35 * p})`; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(t.x, t.y, rad * 0.62, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+    // 테두리 빛과 하이라이트
+    path();
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.stroke();
+    const k = this.radiusAt(-Math.PI / 4) / R;
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.beginPath(); ctx.ellipse(ox - R * 0.38 * k, oy - R * 0.44 * k, R * 0.2 * k, R * 0.1 * k, -0.7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath(); ctx.arc(ox - R * 0.18 * k, oy - R * 0.62 * k, R * 0.035, 0, Math.PI * 2); ctx.fill();
+  },
+
+  mount(sub) {
+    SQUISH_COLORS.forEach(c => {
+      const b = document.createElement('button');
+      b.className = 'chip' + (c === this.color ? ' on' : '');
+      b.textContent = c.name;
+      b.addEventListener('click', () => {
+        this.color = c;
+        sub.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b));
+      });
+      sub.append(b);
+    });
+  },
+};
+
+/* ───────────── UI ───────────── */
+const UI = {
+  countEl: document.getElementById('count'),
+  resetBtn: document.getElementById('reset'),
+  hintEl: document.getElementById('hint'),
+  subEl: document.getElementById('sub'),
+  setText(text) { this.countEl.textContent = text; },
+  setCount(n, total) {
+    this.countEl.textContent = `${n} / ${total}`;
+    this.resetBtn.classList.toggle('pulse', total > 0 && n === total);
+  },
+  hideHint() { this.hintEl.classList.add('hide'); },
+};
+
+/* ───────────── 엔진 ───────────── */
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, scene = BubbleWrap;
+const SCENES = { bubble: BubbleWrap, keyboard: Keyboard, leaf: Leaves, squish: Squishy };
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  scene.init(W, H);
+}
+window.addEventListener('resize', resize);
+UI.resetBtn.addEventListener('click', () => (scene.reset ? scene.reset() : scene.init(W, H)));
+
+// 포인터: 멀티터치 지원. 드래그 중 빠르게 움직여도 놓치지 않도록 이동 경로를 보간한다.
+const pointers = new Map();
+canvas.addEventListener('pointerdown', e => {
+  Sound.unlock();
+  UI.hideHint();
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, t: e.timeStamp });
+  scene.onDown(e.clientX, e.clientY, 0, e.pointerId);
+});
+canvas.addEventListener('pointermove', e => {
+  const p = pointers.get(e.pointerId);
+  if (!p) return;
+  const dx = e.clientX - p.x, dy = e.clientY - p.y;
+  const dist = Math.hypot(dx, dy);
+  const speed = dist / Math.max(1, e.timeStamp - p.t) * 1000; // px/s
+  const step = 8;
+  const n = Math.max(1, Math.ceil(dist / step));
+  for (let i = 1; i <= n; i++) scene.onMove(p.x + dx * i / n, p.y + dy * i / n, speed, e.pointerId);
+  p.x = e.clientX; p.y = e.clientY; p.t = e.timeStamp;
+});
+const end = e => { pointers.delete(e.pointerId); scene.onUp(e.pointerId); };
+canvas.addEventListener('pointerup', end);
+canvas.addEventListener('pointercancel', end);
+
+function setScene(next) {
+  if (scene.unmount) scene.unmount();
+  pointers.clear();
+  scene = next;
+  UI.subEl.textContent = '';
+  if (scene.mount) scene.mount(UI.subEl);
+  UI.resetBtn.style.visibility = scene.resetLabel ? 'visible' : 'hidden';
+  UI.resetBtn.textContent = scene.resetLabel || '';
+  UI.resetBtn.classList.remove('pulse');
+  UI.hintEl.textContent = scene.hint;
+  UI.hintEl.classList.remove('hide');
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', SCENES[b.dataset.scene] === scene));
+  scene.init(W, H);
+}
+document.querySelectorAll('#tabs button').forEach(b => {
+  b.addEventListener('click', () => setScene(SCENES[b.dataset.scene]));
+});
+
+// 처음 화면: 카드를 누르면 그 씬으로 들어간다 (이 클릭이 소리를 켜는 사용자 입력이 된다)
+const homeEl = document.getElementById('home');
+function isHome() { return !homeEl.classList.contains('hide'); }
+function showHome() {
+  if (scene.releaseAll) scene.releaseAll();
+  pointers.clear();
+  homeEl.classList.remove('hide');
+}
+document.querySelectorAll('.card').forEach(b => {
+  b.addEventListener('click', () => {
+    Sound.unlock();
+    const next = SCENES[b.dataset.scene];
+    if (next !== scene) setScene(next);
+    homeEl.classList.add('hide');
+  });
+});
+document.getElementById('homeBtn').addEventListener('click', showHome);
+
+// 소리 끄기 버튼
+const muteBtn = document.getElementById('mute');
+function renderMute() {
+  muteBtn.textContent = Sound.muted ? '🔇' : '🔊';
+  muteBtn.title = Sound.muted ? '소리 켜기' : '소리 끄기';
+  muteBtn.setAttribute('aria-label', muteBtn.title);
+}
+try { Sound.muted = localStorage.getItem('asmrMuted') === '1'; } catch (e) {}
+muteBtn.addEventListener('click', () => { Sound.unlock(); Sound.setMuted(!Sound.muted); renderMute(); });
+renderMute();
+
+// 실제 키보드 (키보드 씬에서만 반응)
+window.addEventListener('keydown', e => {
+  if (e.repeat || e.ctrlKey || e.metaKey || (e.target && e.target.tagName === 'INPUT') || !scene.onKeyDown || isHome()) return;
+  Sound.unlock();
+  if (scene.onKeyDown(e.code)) e.preventDefault();
+});
+window.addEventListener('keyup', e => { if (scene.onKeyUp) scene.onKeyUp(e.code); });
+window.addEventListener('blur', () => { if (scene.releaseAll) scene.releaseAll(); });
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  scene.update(dt);
+  ctx.clearRect(0, 0, W, H);
+  scene.draw(ctx, W, H);
+  requestAnimationFrame(frame);
+}
+
+resize();
+setScene(scene);
+requestAnimationFrame(frame);
+</script>
+<script>
+// 홈 화면에 추가했을 때 오프라인에서도 열리게 한다 (https 또는 localhost 에서만 동작)
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
